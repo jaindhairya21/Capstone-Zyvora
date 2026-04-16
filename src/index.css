@@ -8,7 +8,7 @@
   :root {
     --font-inter: 'Inter', sans-serif;
 
-    --background: 180 0% 0%;
+    --background: 180 20% 99%;
     --foreground: 200 15% 12%;
     --card: 0 0% 100%;
     --card-foreground: 200 15% 12%;
@@ -82,8 +82,35 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
   }
+
+  html, body {
+    overscroll-behavior: none;
+    overscroll-behavior-y: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
   body {
     @apply bg-background text-foreground font-inter;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Re-enable text selection for actual content */
+  input, textarea, [contenteditable],
+  .selectable {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  /* Buttons and interactive elements: no tap highlight, no selection */
+  button, a, [role="button"], label {
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: pointer;
   }
 }

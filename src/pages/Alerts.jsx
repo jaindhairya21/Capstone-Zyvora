@@ -73,7 +73,7 @@ export default function Alerts() {
                   </div>
                   <div className="flex-1">
                     <p className="text-sm font-medium text-foreground">{alert.title}</p>
-                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed">{alert.message}</p>
+                    <p className="text-xs text-muted-foreground mt-1 leading-relaxed selectable">{alert.message}</p>
                     <p className="text-[10px] text-muted-foreground mt-2">
                       {format(new Date(alert.created_date), 'MMM d, h:mm a')}
                     </p>

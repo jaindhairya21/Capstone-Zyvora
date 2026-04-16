@@ -117,7 +117,7 @@ export default function SessionDetail() {
       {session.notes && (
         <div className="bg-card border border-border rounded-2xl p-4">
           <p className="text-xs font-medium text-muted-foreground mb-1 uppercase tracking-wider">Notes</p>
-          <p className="text-sm text-foreground">{session.notes}</p>
+          <p className="text-sm text-foreground selectable">{session.notes}</p>
         </div>
       )}
     </div>
