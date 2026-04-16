@@ -6,7 +6,9 @@ import PageNotFound from './lib/PageNotFound';
 import { AuthProvider, useAuth } from '@/lib/AuthContext';
 import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 
+import { AnimatePresence } from 'framer-motion';
 import AppLayout from '@/components/layout/AppLayout';
+import PageTransition from '@/components/layout/PageTransition';
 import Home from '@/pages/Home';
 import LiveTracking from '@/pages/LiveTracking';
 import Progress from '@/pages/Progress';
@@ -39,18 +41,20 @@ const AuthenticatedApp = () => {
   }
 
   return (
-    <Routes>
-      <Route element={<AppLayout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/live" element={<LiveTracking />} />
-        <Route path="/progress" element={<Progress />} />
-        <Route path="/history" element={<History />} />
-      </Route>
-      <Route path="/history/:id" element={<SessionDetail />} />
-      <Route path="/alerts" element={<Alerts />} />
-      <Route path="/profile" element={<Profile />} />
-      <Route path="*" element={<PageNotFound />} />
-    </Routes>
+    <AnimatePresence mode="wait">
+      <Routes>
+        <Route element={<AppLayout />}>
+          <Route path="/" element={<Home />} />
+          <Route path="/live" element={<LiveTracking />} />
+          <Route path="/progress" element={<Progress />} />
+          <Route path="/history" element={<History />} />
+        </Route>
+        <Route path="/history/:id" element={<PageTransition><SessionDetail /></PageTransition>} />
+        <Route path="/alerts" element={<PageTransition><Alerts /></PageTransition>} />
+        <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
+        <Route path="*" element={<PageNotFound />} />
+      </Routes>
+    </AnimatePresence>
   );
 };
 
