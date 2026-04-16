@@ -1,0 +1,53 @@
+{
+  "name": "Session",
+  "type": "object",
+  "properties": {
+    "duration_seconds": {
+      "type": "number",
+      "description": "Duration of the session in seconds"
+    },
+    "max_angle": {
+      "type": "number",
+      "description": "Maximum knee bend angle reached"
+    },
+    "min_angle": {
+      "type": "number",
+      "description": "Minimum knee angle during session"
+    },
+    "avg_angle": {
+      "type": "number",
+      "description": "Average knee angle during session"
+    },
+    "angle_data": {
+      "type": "array",
+      "description": "Array of angle readings over time",
+      "items": {
+        "type": "object",
+        "properties": {
+          "time": {
+            "type": "number"
+          },
+          "angle": {
+            "type": "number"
+          }
+        }
+      }
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "completed",
+        "incomplete",
+        "in_progress"
+      ],
+      "default": "completed"
+    },
+    "notes": {
+      "type": "string"
+    }
+  },
+  "required": [
+    "duration_seconds",
+    "max_angle"
+  ]
+}
