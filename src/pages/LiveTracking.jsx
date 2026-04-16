@@ -5,9 +5,12 @@ import { Pause, Square, Play, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot } from 'recharts';
 import AngleDisplay from '@/components/shared/AngleDisplay';
+import { useQueryClient } from '@tanstack/react-query';
+import { base44 } from '@/api/base44Client';
 
 export default function LiveTracking() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [isRunning, setIsRunning] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [currentAngle, setCurrentAngle] = useState(30);
@@ -57,10 +60,40 @@ export default function LiveTracking() {
     return `${m.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
   }, []);
 
-  const handleStop = () => {
+  const handleStop = async () => {
     setIsRunning(false);
-    // In real app, would save session
-    setTimeout(() => navigate('/history'), 500);
+
+    const newSession = {
+      id: `optimistic-${Date.now()}`,
+      created_date: new Date().toISOString(),
+      updated_date: new Date().toISOString(),
+      duration_seconds: elapsed,
+      max_angle: maxAngle,
+      min_angle: minAngle === 180 ? 0 : minAngle,
+      avg_angle: data.length
+        ? Math.round(data.reduce((s, d) => s + d.angle, 0) / data.length)
+        : 0,
+      status: 'completed',
+      angle_data: data,
+    };
+
+    // Optimistic update: inject session immediately into the cache (0ms feel)
+    queryClient.setQueryData(['sessions'], (old = []) => [newSession, ...old]);
+
+    // Fire-and-forget persist in background
+    base44.entities.Session.create({
+      duration_seconds: newSession.duration_seconds,
+      max_angle: newSession.max_angle,
+      min_angle: newSession.min_angle,
+      avg_angle: newSession.avg_angle,
+      status: 'completed',
+      angle_data: newSession.angle_data,
+    }).then(() => {
+      // Refresh with real server data
+      queryClient.invalidateQueries({ queryKey: ['sessions'] });
+    });
+
+    navigate('/history');
   };
 
   const handleReset = () => {

@@ -9,10 +9,6 @@ import UserNotRegisteredError from '@/components/UserNotRegisteredError';
 import { AnimatePresence } from 'framer-motion';
 import AppLayout from '@/components/layout/AppLayout';
 import PageTransition from '@/components/layout/PageTransition';
-import Home from '@/pages/Home';
-import LiveTracking from '@/pages/LiveTracking';
-import Progress from '@/pages/Progress';
-import History from '@/pages/History';
 import SessionDetail from '@/pages/SessionDetail';
 import Alerts from '@/pages/Alerts';
 import Profile from '@/pages/Profile';
@@ -41,20 +37,20 @@ const AuthenticatedApp = () => {
   }
 
   return (
-    <AnimatePresence mode="wait">
-      <Routes>
-        <Route element={<AppLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/live" element={<LiveTracking />} />
-          <Route path="/progress" element={<Progress />} />
-          <Route path="/history" element={<History />} />
-        </Route>
-        <Route path="/history/:id" element={<PageTransition><SessionDetail /></PageTransition>} />
-        <Route path="/alerts" element={<PageTransition><Alerts /></PageTransition>} />
-        <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
-        <Route path="*" element={<PageNotFound />} />
-      </Routes>
-    </AnimatePresence>
+    <Routes>
+      {/* Tab routes: AppLayout handles persistent rendering internally */}
+      <Route path="/" element={<AppLayout />} />
+      <Route path="/live" element={<AppLayout />} />
+      <Route path="/progress" element={<AppLayout />} />
+      <Route path="/history" element={<AppLayout />} />
+
+      {/* Detail / overlay routes with slide transition */}
+      <Route path="/history/:id" element={<PageTransition><SessionDetail /></PageTransition>} />
+      <Route path="/alerts" element={<PageTransition><Alerts /></PageTransition>} />
+      <Route path="/profile" element={<PageTransition><Profile /></PageTransition>} />
+
+      <Route path="*" element={<PageNotFound />} />
+    </Routes>
   );
 };
 
