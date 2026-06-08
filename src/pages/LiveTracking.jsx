@@ -5,12 +5,16 @@ import { Pause, Square, Play, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, ReferenceDot } from 'recharts';
 import AngleDisplay from '@/components/shared/AngleDisplay';
+import BluetoothButton from '@/components/shared/BluetoothButton';
 import { useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
+import { useBluetooth } from '@/hooks/useBluetooth';
 
 export default function LiveTracking() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { connected, connecting, error: btError, angle: btAngle, battery: btBattery, connect, disconnect, onAngleRef } = useBluetooth();
+
   const [isRunning, setIsRunning] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [currentAngle, setCurrentAngle] = useState(30);
@@ -19,40 +23,60 @@ export default function LiveTracking() {
   const [minAngle, setMinAngle] = useState(180);
   const maxPointRef = useRef({ time: 0, angle: 0 });
   const minPointRef = useRef({ time: 0, angle: 180 });
+  const dataLenRef = useRef(0);
 
-  // Simulate sensor data
+  // Push a new angle reading into state (shared by BLE & simulation)
+  const pushAngle = useCallback((clampedAngle) => {
+    setCurrentAngle(clampedAngle);
+    setData(prev => {
+      const newPoint = { time: prev.length, angle: clampedAngle };
+      dataLenRef.current = prev.length + 1;
+      return [...prev, newPoint].slice(-60);
+    });
+    setMaxAngle(prev => {
+      if (clampedAngle > prev) {
+        maxPointRef.current = { time: dataLenRef.current - 1, angle: clampedAngle };
+        return clampedAngle;
+      }
+      return prev;
+    });
+    setMinAngle(prev => {
+      if (clampedAngle < prev) {
+        minPointRef.current = { time: dataLenRef.current - 1, angle: clampedAngle };
+        return clampedAngle;
+      }
+      return prev;
+    });
+  }, []);
+
+  // Wire BLE angle callback
   useEffect(() => {
-    if (!isRunning) return;
+    if (connected) {
+      onAngleRef.current = (angle) => { if (isRunning) pushAngle(angle); };
+    } else {
+      onAngleRef.current = null;
+    }
+  }, [connected, isRunning, pushAngle, onAngleRef]);
+
+  // Simulation fallback — only runs when NOT connected via BLE
+  useEffect(() => {
+    if (!isRunning || connected) return;
     const interval = setInterval(() => {
       setElapsed(prev => prev + 1);
       const newAngle = Math.round(30 + 60 * Math.sin(Date.now() / 2000) + (Math.random() - 0.5) * 15);
       const clampedAngle = Math.max(5, Math.min(135, newAngle));
-      setCurrentAngle(clampedAngle);
+      pushAngle(clampedAngle);
 
-      setData(prev => {
-        const newPoint = { time: prev.length, angle: clampedAngle };
-        const updated = [...prev, newPoint].slice(-60);
-        return updated;
-      });
-
-      setMaxAngle(prev => {
-        if (clampedAngle > prev) {
-          maxPointRef.current = { time: data.length, angle: clampedAngle };
-          return clampedAngle;
-        }
-        return prev;
-      });
-
-      setMinAngle(prev => {
-        if (clampedAngle < prev) {
-          minPointRef.current = { time: data.length, angle: clampedAngle };
-          return clampedAngle;
-        }
-        return prev;
-      });
     }, 1000);
     return () => clearInterval(interval);
-  }, [isRunning, data.length]);
+  }, [isRunning, connected, pushAngle]);
+
+  // BLE timer tick — elapsed still needs to count when using real sensor
+  useEffect(() => {
+    if (!isRunning || !connected) return;
+    const interval = setInterval(() => setElapsed(prev => prev + 1), 1000);
+    return () => clearInterval(interval);
+  }, [isRunning, connected]);
 
   const formatTime = useCallback((s) => {
     const m = Math.floor(s / 60);
@@ -110,13 +134,29 @@ export default function LiveTracking() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-semibold text-foreground">Live Session</h1>
-          <p className="text-sm text-muted-foreground">Recording in progress</p>
+          <p className="text-sm text-muted-foreground">
+            {connected ? 'Sensor connected via Bluetooth' : 'Simulation mode'}
+          </p>
         </div>
         <div className="px-4 py-2 rounded-full bg-secondary">
           <span className="text-lg font-mono font-medium text-foreground tabular-nums">
             {formatTime(elapsed)}
           </span>
         </div>
+      </div>
+
+      {/* Bluetooth connect / error */}
+      <div className="flex flex-col gap-2">
+        <BluetoothButton
+          connected={connected}
+          connecting={connecting}
+          onConnect={connect}
+          onDisconnect={disconnect}
+          className="self-start"
+        />
+        {btError && (
+          <p className="text-xs text-destructive bg-destructive/5 rounded-xl px-3 py-2">{btError}</p>
+        )}
       </div>
 
       {/* Live Angle */}

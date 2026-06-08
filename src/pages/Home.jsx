@@ -6,14 +6,22 @@ import { Button } from '@/components/ui/button';
 import AngleDisplay from '@/components/shared/AngleDisplay';
 import StatusBadge from '@/components/shared/StatusBadge';
 import StatCard from '@/components/shared/StatCard';
+import BluetoothButton from '@/components/shared/BluetoothButton';
+import { useBluetooth } from '@/hooks/useBluetooth';
 
 export default function Home() {
+  const { connected, connecting, angle: btAngle, battery: btBattery, connect, disconnect } = useBluetooth();
   const [currentAngle, setCurrentAngle] = useState(42);
-  const [connected] = useState(true);
-  const [battery] = useState(78);
 
-  // Simulate gentle angle variation
+  // Use BLE angle when connected, else simulate
   useEffect(() => {
+    if (btAngle !== null) {
+      setCurrentAngle(btAngle);
+    }
+  }, [btAngle]);
+
+  useEffect(() => {
+    if (connected) return; // real data in use
     const interval = setInterval(() => {
       setCurrentAngle(prev => {
         const delta = (Math.random() - 0.5) * 4;
@@ -21,7 +29,9 @@ export default function Home() {
       });
     }, 1500);
     return () => clearInterval(interval);
-  }, []);
+  }, [connected]);
+
+  const battery = btBattery ?? 78;
 
   return (
     <div className="px-5 pt-14 space-y-6">
@@ -47,7 +57,15 @@ export default function Home() {
       </div>
 
       {/* Device Status */}
-      <StatusBadge connected={connected} battery={battery} />
+      <div className="flex items-center justify-between">
+        <StatusBadge connected={connected} battery={battery} />
+        <BluetoothButton
+          connected={connected}
+          connecting={connecting}
+          onConnect={connect}
+          onDisconnect={disconnect}
+        />
+      </div>
 
       {/* Live Angle Display */}
       <motion.div
