@@ -14,9 +14,10 @@ const fallRiskConfig = {
   high:   { color: 'text-red-600',    bg: 'bg-red-100 dark:bg-red-900/30',       label: 'HIGH FALL RISK' },
 };
 
-export default function AIPredictionCard({ prediction, loading, activityMode }) {
+export default function AIPredictionCard({ prediction, loading }) {
   const cfg = prediction ? (statusConfig[prediction.formStatus] || statusConfig.good) : null;
   const fallCfg = prediction ? (fallRiskConfig[prediction.fallRisk] || fallRiskConfig.low) : null;
+  const isWalking = prediction?.detectedActivity?.toLowerCase().includes('walk');
 
   return (
     <div className="bg-card border border-border rounded-3xl p-4 space-y-3">
@@ -25,6 +26,11 @@ export default function AIPredictionCard({ prediction, loading, activityMode }) 
         <div className="flex items-center gap-2">
           <Brain className="w-4 h-4 text-primary" />
           <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">AI Analysis</span>
+          {prediction?.detectedActivity && (
+            <span className="text-xs bg-secondary text-secondary-foreground px-2 py-0.5 rounded-full font-medium">
+              {prediction.detectedActivity}
+            </span>
+          )}
         </div>
         {loading && <Loader2 className="w-4 h-4 text-primary animate-spin" />}
       </div>
@@ -60,7 +66,7 @@ export default function AIPredictionCard({ prediction, loading, activityMode }) 
             </div>
 
             {/* Fall risk — always show for walking, show only if medium/high otherwise */}
-            {(activityMode === 'walking' || prediction.fallRisk !== 'low') && (
+            {(isWalking || prediction.fallRisk !== 'low') && (
               <div className={`flex items-center gap-2 rounded-2xl px-3 py-2 ${fallCfg.bg}`}>
                 <ShieldAlert className={`w-4 h-4 ${fallCfg.color} flex-shrink-0`} />
                 <span className={`text-sm font-medium ${fallCfg.color}`}>{fallCfg.label}</span>

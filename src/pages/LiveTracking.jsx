@@ -11,13 +11,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { base44 } from '@/api/base44Client';
 import { useBluetooth } from '@/hooks/useBluetooth';
 import { useAIPrediction } from '@/hooks/useAIPrediction';
-
-const ACTIVITY_MODES = [
-  { id: 'exercise',  label: 'Exercise', emoji: '🏋️' },
-  { id: 'therapy',   label: 'Therapy',  emoji: '🩺' },
-  { id: 'walking',   label: 'Walking',  emoji: '🚶' },
-  { id: 'sleeping',  label: 'Sleeping', emoji: '😴' },
-];
+import { useToast } from '@/components/ui/use-toast';
 
 export default function LiveTracking() {
   const navigate = useNavigate();
@@ -25,7 +19,8 @@ export default function LiveTracking() {
   const { connected, connecting, error: btError, angle: btAngle, battery: btBattery, connect, disconnect, onAngleRef } = useBluetooth();
 
   const { prediction, loading: aiLoading, predict } = useAIPrediction();
-  const [activityMode, setActivityMode] = useState('exercise');
+  const { toast } = useToast();
+  const lastNotifiedRef = useRef(0);
   const [isRunning, setIsRunning] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [currentAngle, setCurrentAngle] = useState(30);
@@ -48,8 +43,19 @@ export default function LiveTracking() {
       // Trigger AI prediction every 8 readings (≈8 s), avoid spamming
       if (next.length >= 5 && Date.now() - lastPredictRef.current > 8000) {
         lastPredictRef.current = Date.now();
-        // use setTimeout so we don't block the state update
-        setTimeout(() => predict(next, activityMode), 0);
+        setTimeout(async () => {
+          const result = await predict(next);
+          // Notify if form is poor — throttle notifications to once per 30s
+          if (result?.formStatus === 'poor' && Date.now() - lastNotifiedRef.current > 30000) {
+            lastNotifiedRef.current = Date.now();
+            toast({
+              title: '⚠️ Poor Form Detected',
+              description: result.feedback || 'Please adjust your movement.',
+              variant: 'destructive',
+              duration: 6000,
+            });
+          }
+        }, 0);
       }
 
       return next;
@@ -68,7 +74,7 @@ export default function LiveTracking() {
       }
       return prev;
     });
-  }, [activityMode, predict]);
+  }, [predict, toast]);
 
   // Wire BLE angle callback
   useEffect(() => {
@@ -180,26 +186,6 @@ export default function LiveTracking() {
         )}
       </div>
 
-      {/* Activity Mode Selector */}
-      <div>
-        <p className="text-xs font-medium text-muted-foreground mb-2 uppercase tracking-wider">Activity Mode</p>
-        <div className="grid grid-cols-4 gap-2">
-          {ACTIVITY_MODES.map(({ id, label, emoji }) => (
-            <button
-              key={id}
-              onClick={() => setActivityMode(id)}
-              className={`flex flex-col items-center gap-1 py-2.5 rounded-2xl border text-xs font-medium transition-colors
-                ${activityMode === id
-                  ? 'bg-primary/10 border-primary/40 text-primary'
-                  : 'bg-card border-border text-muted-foreground hover:bg-secondary'}`}
-            >
-              <span className="text-lg">{emoji}</span>
-              {label}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {/* Live Angle */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
@@ -264,7 +250,7 @@ export default function LiveTracking() {
       </div>
 
       {/* AI Prediction */}
-      <AIPredictionCard prediction={prediction} loading={aiLoading} activityMode={activityMode} />
+      <AIPredictionCard prediction={prediction} loading={aiLoading} />
 
       {/* Controls */}
       <div className="flex items-center justify-center gap-4 pb-4">

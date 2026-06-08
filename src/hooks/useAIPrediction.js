@@ -2,21 +2,21 @@ import { useState, useRef, useCallback } from 'react';
 import { base44 } from '@/api/base44Client';
 
 /**
- * Sends a window of recent angle readings + activity mode to the LLM
- * and returns structured predictions:
+ * Sends a window of recent angle readings to the LLM.
+ * The AI auto-detects the activity from the pattern and returns:
+ *   - detectedActivity: string (e.g. "walking", "knee exercise", "resting")
  *   - formScore: 0–100
  *   - formStatus: "good" | "warning" | "poor"
- *   - fallRisk: "low" | "medium" | "high"   (only relevant for walking)
+ *   - fallRisk: "low" | "medium" | "high"
  *   - feedback: short actionable string
  *   - detail: one-sentence explanation
  */
-
 export function useAIPrediction() {
   const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
   const inFlightRef = useRef(false);
 
-  const predict = useCallback(async (angleWindow, activityMode) => {
+  const predict = useCallback(async (angleWindow) => {
     if (inFlightRef.current || angleWindow.length < 5) return;
     inFlightRef.current = true;
     setLoading(true);
@@ -29,32 +29,36 @@ export function useAIPrediction() {
     const trend = angles.slice(-5);
     const trendDir = trend[trend.length - 1] - trend[0];
 
-    const prompt = `You are a physiotherapy AI assistant analyzing knee joint angle sensor data in real-time.
+    const prompt = `You are a physiotherapy AI analyzing real-time knee joint angle sensor data.
 
-Activity: ${activityMode}
-Recent angle window (last ${angles.length} readings in degrees): [${angles.join(', ')}]
+Recent angle readings (degrees, sampled ~1/sec): [${angles.join(', ')}]
 Stats: avg=${avg}°, max=${max}°, min=${min}°, variability=${variance}°, trend=${trendDir > 3 ? 'increasing' : trendDir < -3 ? 'decreasing' : 'stable'}
 
-Based on these angles, analyze the patient's movement quality for ${activityMode}.
+Step 1 — Identify the activity from the angle pattern:
+- Walking: rhythmic oscillation between ~10–40° at regular intervals
+- Knee exercise / rehab: deliberate large range movements (40–120°+), slow and controlled
+- Therapy stretching: slow ramp up to high angle, hold, return
+- Resting/sleeping: low angles (0–20°), minimal variability
+- Unknown: does not clearly match any pattern
 
-For WALKING specifically: also assess fall risk — sudden large drops (>20°) combined with high variability, or very asymmetric movement patterns indicate high fall risk.
+Step 2 — Evaluate form quality for the detected activity:
+- For walking: check rhythm consistency, abnormal angles, fall risk (sudden drops >20° + high variability)
+- For exercise/therapy: is ROM appropriate? Too limited (<30°) = insufficient effort. Sudden jerky movements (high variability) = injury risk.
+- For resting: are there unexpected large movements suggesting discomfort or restlessness?
 
-For EXERCISE/THERAPY: check if the range of motion is appropriate (too limited = needs encouragement, excessive = risk of strain).
-
-For SLEEPING: angles should be minimal and stable; large movements indicate restlessness.
-
-Be concise and clinical. Return JSON only.`;
+Respond with JSON only.`;
 
     const schema = {
       type: 'object',
       properties: {
-        formScore: { type: 'number', description: '0-100 movement quality score' },
+        detectedActivity: { type: 'string', description: 'Short label of detected activity (e.g. "Walking", "Knee Exercise", "Resting")' },
+        formScore: { type: 'number', description: '0–100 movement quality score' },
         formStatus: { type: 'string', enum: ['good', 'warning', 'poor'] },
         fallRisk: { type: 'string', enum: ['low', 'medium', 'high'] },
         feedback: { type: 'string', description: 'Short actionable tip (max 8 words)' },
         detail: { type: 'string', description: 'One sentence clinical explanation' },
       },
-      required: ['formScore', 'formStatus', 'fallRisk', 'feedback', 'detail'],
+      required: ['detectedActivity', 'formScore', 'formStatus', 'fallRisk', 'feedback', 'detail'],
     };
 
     try {
@@ -63,6 +67,7 @@ Be concise and clinical. Return JSON only.`;
         response_json_schema: schema,
       });
       setPrediction(result);
+      return result;
     } finally {
       setLoading(false);
       inFlightRef.current = false;
