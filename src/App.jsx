@@ -40,6 +40,7 @@ const AuthenticatedApp = () => {
     <Routes>
       {/* Tab routes: AppLayout handles persistent rendering internally */}
       <Route path="/" element={<AppLayout />} />
+      <Route path="/analyze" element={<AppLayout />} />
       <Route path="/live" element={<AppLayout />} />
       <Route path="/progress" element={<AppLayout />} />
       <Route path="/history" element={<AppLayout />} />

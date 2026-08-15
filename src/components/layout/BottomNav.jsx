@@ -1,9 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Activity, TrendingUp, Clock } from 'lucide-react';
+import { Home, Activity, TrendingUp, Clock, ScanLine } from 'lucide-react';
 
 const tabs = [
   { path: '/', label: 'Home', icon: Home },
+  { path: '/analyze', label: 'Analyze', icon: ScanLine },
   { path: '/live', label: 'Live', icon: Activity },
   { path: '/progress', label: 'Progress', icon: TrendingUp },
   { path: '/history', label: 'History', icon: Clock },

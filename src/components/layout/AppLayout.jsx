@@ -5,11 +5,13 @@ import Home from '@/pages/Home';
 import LiveTracking from '@/pages/LiveTracking';
 import Progress from '@/pages/Progress';
 import History from '@/pages/History';
+import KneeAnalysis from '@/pages/KneeAnalysis';
 
 // All tab pages are permanently mounted; visibility toggled via CSS only.
 // This preserves scroll position, component state, and avoids re-fetching.
 const TAB_PAGES = [
   { path: '/', Component: Home },
+  { path: '/analyze', Component: KneeAnalysis },
   { path: '/live', Component: LiveTracking },
   { path: '/progress', Component: Progress },
   { path: '/history', Component: History },
